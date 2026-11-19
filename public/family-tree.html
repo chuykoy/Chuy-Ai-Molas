@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telesporo Dador Family Tree</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0;
+      background: #f4f7fb;
+      color: #1f2937;
+      padding: 16px;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .top-card {
+      background: #ffffff;
+      border-left: 5px solid #15803d;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .top-card h1 {
+      margin: 0;
+      font-size: 1.45rem;
+      color: #14532d;
+    }
+    .top-card p {
+      margin: 6px 0 0;
+      font-size: 0.92rem;
+      color: #4b5563;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 11px 12px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #15803d;
+      color: #ffffff;
+      border-color: #15803d;
+    }
+    .panel {
+      display: none;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .panel.active { display: block; }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 0.95rem;
+    }
+    .btn-save {
+      margin-top: 16px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      background: #15803d;
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .status.ok { display: block; background: #dcfce7; color: #14532d; }
+    .status.err { display: block; background: #fee2e2; color: #991b1b; }
+    .card {
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid #16a34a;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 10px;
+      background: #fafafa;
+    }
+    .branch {
+      margin-left: 16px;
+      padding-left: 12px;
+      border-left: 2px dashed #86efac;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top-card">
+      <h1>🌳 Telesporo Dador Family Tree</h1>
+      <p>Mag-fill up ng form para magdagdag ng miyembro at makita ang buong puno mula kay Telesporo Dador.</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('tabForm', this)">📝 Fill Up Form</button>
+      <button class="tab-btn" onclick="switchTab('tabTree', this)">🌲 Lahat ng Pangalan</button>
+    </div>
+
+    <div id="tabForm" class="panel active">
+      <h2 style="margin-top:0; font-size:1.15rem;">Magdagdag sa Family Tree</h2>
+      <form id="treeForm">
+        <label for="fullName">Buong Pangalan *</label>
+        <input id="fullName" type="text" placeholder="Hal. Juan Dador" required />
+
+        <label for="parentSelect">Sino ang Magulang mula sa Pamilya? *</label>
+        <select id="parentSelect"></select>
+
+        <div id="otherParentWrap" style="display:none;">
+          <label for="otherParent">Kung "Iba pa", isulat ang pangalan ng magulang</label>
+          <input id="otherParent" type="text" placeholder="Hal. Maria Dador" />
+        </div>
+
+        <label for="spouseInput">Asawa (kung mayroon)</label>
+        <input id="spouseInput" type="text" placeholder="Opsyonal" />
+
+        <label for="childrenInput">Mga Anak (paghiwalayin ng kuwit / comma)</label>
+        <input id="childrenInput" type="text" placeholder="Hal. Pedro Dador, Ana Dador" />
+
+        <button class="btn-save" type="submit">I-save sa Family Tree</button>
+        <div id="formStatus" class="status"></div>
+      </form>
+    </div>
+
+    <div id="tabTree" class="panel">
+      <h2 style="margin-top:0; font-size:1.15rem;">Lahat ng Pangalan (<span id="totalCount">1</span>)</h2>
+      <input id="searchBox" type="text" placeholder="🔍 Maghanap ng pangalan..." oninput="renderTree()" />
+
+      <h3 style="margin-bottom:6px; font-size:1rem;">🌿 Puno Mula Kay Telesporo Dador</h3>
+      <div id="visualTree"></div>
+
+      <h3 style="margin-top:20px; margin-bottom:6px; font-size:1rem;">📋 Kumpletong Listahan</h3>
+      <div id="fullList"></div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "telesporo_dador_tree_chuy_ai_v1";
+
+    let people = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [
+      { name: "Telesporo Dador", parent: null, spouse: "", children: "" }
+    ];
+
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(people));
+    }
+
+    function switchTab(id, btn) {
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      btn.classList.add("active");
+      renderTree();
+    }
+
+    const parentSelect = document.getElementById("parentSelect");
+    const otherParentWrap = document.getElementById("otherParentWrap");
+
+    parentSelect.addEventListener("change", () => {
+      otherParentWrap.style.display = parentSelect.value === "__OTHER__" ? "block" : "none";
+    });
+
+    function loadParents() {
+      parentSelect.innerHTML = "";
+      people.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.name;
+        opt.textContent = p.name;
+        parentSelect.appendChild(opt);
+      });
+      const optOther = document.createElement("option");
+      optOther.value = "__OTHER__";
+      optOther.textContent = "Iba pa (ilagay sa ibaba)";
+      parentSelect.appendChild(optOther);
+    }
+
+    document.getElementById("treeForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const nameEl = document.getElementById("fullName");
+      const otherEl = document.getElementById("otherParent");
+      const spouseEl = document.getElementById("spouseInput");
+      const childrenEl = document.getElementById("childrenInput");
+      const statusEl = document.getElementById("formStatus");
+
+      const name = nameEl.value.trim();
+      const parent = parentSelect.value === "__OTHER__"
+        ? otherEl.value.trim()
+        : parentSelect.value;
+
+      if (!name || !parent) {
+        statusEl.className = "status err";
+        statusEl.textContent = "Pakilagay ang buong pangalan at ang magulang.";
+        return;
+      }
+
+      people.push({
+        name,
+        parent,
+        spouse: spouseEl.value.trim(),
+        children: childrenEl.value.trim()
+      });
+
+      persist();
+      loadParents();
+      renderTree();
+
+      nameEl.value = "";
+      otherEl.value = "";
+      spouseEl.value = "";
+      childrenEl.value = "";
+      otherParentWrap.style.display = "none";
+
+      statusEl.className = "status ok";
+      statusEl.textContent = `Nadagdag na si ${name} sa ilalim ni ${parent}!`;
+    });
+
+    function buildBranches(parentName) {
+      const kids = people.filter(p => p.parent === parentName);
+      if (!kids.length) return "";
+      return kids.map(k => {
+        const sp = k.spouse ? ` 💍 <em>(${k.spouse})</em>` : "";
+        return `
+          <div class="branch">
+            <div>🌱 <strong>${k.name}</strong>${sp}</div>
+            ${buildBranches(k.name)}
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderTree() {
+      loadParents();
+      document.getElementById("totalCount").textContent = people.length;
+
+      const root = people.find(p => p.name === "Telesporo Dador") || people[0];
+      const rootSpouse = root && root.spouse ? ` 💍 <em>(${root.spouse})</em>` : "";
+      document.getElementById("visualTree").innerHTML = root
+        ? `<div class="card"><strong>🌳 ${root.name}</strong>${rootSpouse}${buildBranches(root.name)}</div>`
+        : "";
+
+      const q = document.getElementById("searchBox").value.trim().toLowerCase();
+      const matches = people.filter(p =>
+        !q ||
+        p.name.toLowerCase().includes(q) ||
+        (p.parent && p.parent.toLowerCase().includes(q)) ||
+        (p.spouse && p.spouse.toLowerCase().includes(q)) ||
+        (p.children && p.children.toLowerCase().includes(q))
+      );
+
+      document.getElementById("fullList").innerHTML = matches.map((p, idx) => `
+        <div class="card">
+          <strong>${idx + 1}. ${p.name}</strong><br/>
+          <small>⬆️ Magulang: ${p.parent || "Pinagmulan (Telesporo Dador)"}</small>
+          ${p.spouse ? `<br/><small>💍 Asawa: ${p.spouse}</small>` : ""}
+          ${p.children ? `<br/><small>👶 Mga Anak: ${p.children}</small>` : ""}
+        </div>
+      `).join("");
+    }
+
+    renderTree();
+  </script>
+</body>
+</html>
